@@ -1,0 +1,97 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <!-- Required meta tags -->
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+
+    <!-- Bootstrap CSS -->
+    <link href="/static/css/bootstrap.min.css" rel="stylesheet">
+
+    <title>Scrobbling Now: {{ track }}</title>
+  </head>
+  <body>
+    <div class="wrapper">
+      <div class="bg-image min-vh-100"></div>
+      <div class="container-lg bg-transparent">
+        <div class="position-absolute top-50 start-50 translate-middle w-75">
+          <div class="row">
+            <div class="col">
+              <img src={{ album_art }} class="rounded mx-auto d-block"/>
+            </div>
+          </div>
+          <div class="row">
+            <div class="col">
+              <h1 class="display-1 text-center fw-bolder m-3">{{ track }}</h1>
+              <h2 class="display-6 text-center text-dark text-opacity-75 fw-bold">{{ artist }}</h2>
+              <h3 class="display-6 text-center text-dark text-opacity-75 fw-bold">{{ album }}</h3>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Bootstrap JS -->
+    <script src="/static/js/bootstrap.min.js"></script>
+
+    <!-- Check if webpage should reload -->
+    <script>
+      let currentTrackName = "{{ track | safe }}";
+
+      async function checkTrackChanged(track) {
+        console.log(`Checking if track has changed from ${track}`);
+
+        let trackChanged = false;
+        let sleepMs = 5000;
+
+        let requestUrl = "https://ws.audioscrobbler.com/" +
+                         "2.0/?method=user.getrecenttracks" +
+                         "&user={{ user }}&api_key={{ key }}" +
+                         "&limit=2&format=json";
+        let response = await fetch(requestUrl);
+        let data = await response.json();
+
+        if (!data["recenttracks"]["track"][0].hasOwnProperty("@attr")) {
+          // If there is no track playing, then the most recent track
+          // will not have an @attr key.
+          trackChanged = false;
+          sleepMs = 15000;
+
+          console.log(`No track being played, reducing check interval to ${sleepMs}ms`);
+        } else {
+          if (data["recenttracks"]["track"][0]["name"] != track) {
+            // Track name is different, so track has changed
+            trackChanged = true;
+          }
+        }
+
+        return { trackChanged, sleepMs };
+      }
+
+      async function refreshOrSleep() {
+          const { trackChanged, sleepMs } = await checkTrackChanged(currentTrackName);
+          if (trackChanged) {
+            window.location.reload();
+          } else {
+            console.log(`Checking for track change in ${sleepMs}ms`);
+            setTimeout(refreshOrSleep, sleepMs);
+          }
+      }
+
+      refreshOrSleep();
+    </script>
+
+    <!-- Style background image -->
+    <style>
+      .bg-image {
+        background-image: linear-gradient(rgba(255, 255, 255, 0.55), rgba(255, 255, 255, 0.55)),
+                          url({{ album_art | safe }});
+        filter: blur(20px);
+        background-position: center;
+        background-size: cover;
+        width: 100%;
+        height: 100%;
+      }
+    </style>
+  </body>
+</html>
