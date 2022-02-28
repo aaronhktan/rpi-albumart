@@ -36,41 +36,44 @@
 
     <!-- Check if webpage should reload -->
     <script>
+      const sleepMs = 5000; // Interval between checks
       let currentTrackName = "{{ track | safe }}";
 
       async function checkTrackChanged(track) {
         console.log(`Checking if track has changed from ${track}`);
 
         let trackChanged = false;
-        let sleepMs = 5000;
 
         let requestUrl = "https://ws.audioscrobbler.com/" +
                          "2.0/?method=user.getrecenttracks" +
                          "&user={{ user }}&api_key={{ key }}" +
-                         "&limit=2&format=json";
-        let response = await fetch(requestUrl);
-        let data = await response.json();
+                         "&limit=1&format=json";
+        try {
+          let response = await fetch(requestUrl);
+          let data = await response.json();
 
-        if (!data["recenttracks"]["track"][0].hasOwnProperty("@attr")) {
-          // If there is no track playing, then the most recent track
-          // will not have an @attr key.
-          trackChanged = false;
-          sleepMs = 15000;
-
-          console.log(`No track being played, reducing check interval to ${sleepMs}ms`);
-        } else {
-          if (data["recenttracks"]["track"][0]["name"] != track) {
+          if (!data["recenttracks"]["track"][0].hasOwnProperty("@attr")) {
+            // If there is no track playing, then the most recent track
+            // will not have an @attr key.
+            trackChanged = true;
+            console.log(`No track being played, redirecting to not playing page...`);
+          } else if (data["recenttracks"]["track"][0]["name"] != track) {
             // Track name is different, so track has changed
             trackChanged = true;
           }
+        } catch (error) {
+          // Fetching from API failed for some reason,
+          // just log and return defaults
+          console.log(error);
         }
 
-        return { trackChanged, sleepMs };
+        return trackChanged;
       }
 
       async function refreshOrSleep() {
-          const { trackChanged, sleepMs } = await checkTrackChanged(currentTrackName);
+          let trackChanged = await checkTrackChanged(currentTrackName);
           if (trackChanged) {
+            console.log(`Track has changed, reloading...`);
             window.location.reload();
           } else {
             console.log(`Checking for track change in ${sleepMs}ms`);

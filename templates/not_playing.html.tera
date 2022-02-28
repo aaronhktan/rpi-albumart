@@ -1,0 +1,104 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <!-- Required meta tags -->
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+
+    <!-- Bootstrap CSS -->
+    <link href="/static/css/bootstrap.min.css" rel="stylesheet">
+
+    <title>Listening Stats</title>
+  </head>
+  <body>
+    {% set num_cols = 3 %}
+    <div class="wrapper">
+      <div class="min-vh-100 bg-dark"></div>
+      <div class="container w-50">
+        <div class="position-absolute top-50 start-50 translate-middle mw-100 d-flex flex-column" style="height: 75vh;">
+          <div class="row">
+            <h1 class="display-5 text-left fw-bolder"><small class="text-white text-opacity-75">Since</small> <span class="text-light bg-info">{{ account_creation }}</span><small class="text-white text-opacity-75">,</small> <span class="text-dark bg-warning">{{ user }}</span> <small class="text-white text-opacity-75">has listened to</small> <span class="text-light bg-danger">{{ scrobble_count }}</span> <small class="text-white text-opacity-75">tracks.</small></h1>
+          </div>
+          {% for album in albums %}
+            {% if loop.index0 % num_cols == 0 %}
+              <div class="row gx-0 flex-shrink-1" style="min-width: 0; min-height: 0; overflow: hidden;">
+            {% endif %}
+                <div class="col w-auto h-100">
+                  <img src={{ album.album_art }} class="mw-100 mh-100 mx-auto d-block"/>
+                </div>
+            {% if loop.index0 % num_cols == num_cols - 1 %}
+              </div>
+            {% endif %}
+          {% endfor %}
+        </div>
+      </div>
+    </div>
+
+    <!-- Bootstrap JS -->
+    <script src="/static/js/bootstrap.min.js"></script>
+
+    <!-- Check if webpage should reload -->
+    <script>
+      const sleepMs = 15000; // Interval between checks
+
+      async function checkNowPlaying() {
+        console.log(`Checking if user is listening to music...`);
+
+        let nowPlaying = false;
+
+        let requestUrl = "https://ws.audioscrobbler.com/" +
+                         "2.0/?method=user.getrecenttracks" +
+                         "&user={{ user }}&api_key={{ key }}" +
+                         "&limit=1&format=json";
+        try {
+          let response = await fetch(requestUrl);
+          let data = await response.json();
+
+          if (!data["recenttracks"]["track"][0].hasOwnProperty("@attr")) {
+            // If there is no track playing, then the most recent track
+            // will not have an @attr key.
+            nowPlaying = false;
+            console.log("User is not listening to music");
+          } else if (data["recenttracks"]["track"][0]["@attr"]["nowplaying"] === "true") {
+            // Track name exists, and user is listening to the track
+            nowPlaying = true;
+            console.log("User is listening to music");
+          }
+        } catch (error) {
+          // Fetching from API failed for some reason,
+          // just log and return defaults
+          console.log(error);
+        }
+
+        console.log(`Returning ${nowPlaying}`);
+        return nowPlaying;
+      }
+
+      async function refreshOrSleep() {
+          let nowPlaying = await checkNowPlaying();
+          console.log(`nowPlaying: ${nowPlaying}`);
+          if (nowPlaying) {
+            console.log(`User is listening to music, reloading...`);
+            window.location.reload();
+          } else {
+            console.log(`Checking for music in ${sleepMs}ms`);
+            setTimeout(refreshOrSleep, sleepMs);
+          }
+      }
+
+      refreshOrSleep();
+    </script>
+
+    <!-- Style background image -->
+<!--     <style>
+      .bg-image {
+        background-image: linear-gradient(rgba(255, 255, 255, 0.55), rgba(255, 255, 255, 0.55))
+        filter: blur(20px);
+        background-position: center;
+        background-size: cover;
+        width: 100%;
+        height: 100%;
+      }
+    </style> -->
+  </body>
+</html>
