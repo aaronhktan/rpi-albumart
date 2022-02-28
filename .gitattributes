@@ -1,0 +1,3 @@
+static/css/*.css linguist-vendored
+static/js/*.js linguist-vendored
+static/js/*.js.map linguist-vendored
