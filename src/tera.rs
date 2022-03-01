@@ -2,6 +2,7 @@ use std::collections::HashMap;
 use std::convert::From;
 
 use chrono::NaiveDateTime;
+use futures::join;
 
 use rocket::serde::Serialize;
 use rocket::Request;
@@ -79,8 +80,8 @@ pub async fn hello(user: Option<&str>, key: Option<&str>) -> Template {
             let user_stats = lastfm::get_user_stats(user, key);
             let album_stats = lastfm::get_top_albums(user, key, lastfm::QueryPeriod::SevenDay, &9);
 
-            let user_stats = user_stats.await.unwrap();
-            let album_stats = album_stats.await.unwrap();
+            let (user_stats, album_stats) = join!(user_stats, album_stats);
+            let (user_stats, album_stats) = (user_stats.unwrap(), album_stats.unwrap());
 
             // Convert account creation epoch time to string
             let account_creation = NaiveDateTime::from_timestamp(user_stats.registered_time, 0)

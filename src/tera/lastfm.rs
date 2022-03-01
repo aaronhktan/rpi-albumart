@@ -61,6 +61,7 @@ pub async fn get_current_playing(username: &str, api_key: &str) -> Result<Option
     let json = response.json::<serde_json::Value>().await?;
 
     if json["recenttracks"]["track"][0]["@attr"]["nowplaying"] != "true" {
+        // There is no track playing, but this is not an error!
         return Ok(None);
     }
 
